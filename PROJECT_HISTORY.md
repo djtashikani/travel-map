@@ -99,10 +99,9 @@ pm2 restart travel-map
 - デプロイ作業中にDockerコンテナが停止していたことを発見
 - **対応**: `docker start video-chopper` で復旧
 
-### DNS設定（要確認）
-- `travel.tashikani.jp` のAレコードを `198.13.36.101` に向ける必要あり
-- 2026-02-06時点で `85.131.209.157` を指しており、Vultrへの到達不可
-- DNS変更後はVultrのNginx + SSL設定で正しく動作する見込み
+### DNS設定 ✅ 完了
+- `travel.tashikani.jp` のAレコードを `198.13.36.101` に設定済み
+- HTTPS接続・ページ表示・API動作すべて確認済み
 
 ### 現在の本番環境サマリー（2026-02-06時点）
 
@@ -122,7 +121,7 @@ pm2 restart travel-map
 | sydney-travel-map | https://map.tashikani.jp | 3000 | PM2 | ✅ 稼働中 |
 | video-chopper | https://video-chopper.tashikani.jp | 3001 | Docker | ✅ 稼働中 |
 | mind-circuit | https://basic.mind-circuit.jp | 3002 | PM2 | ✅ 稼働中 |
-| **travel-map** | **https://travel.tashikani.jp** | **3003** | **PM2** | **⚠️ DNS未反映** |
+| **travel-map** | **https://travel.tashikani.jp** | **3003** | **PM2** | **✅ 稼働中** |
 
 ---
 
