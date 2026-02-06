@@ -54,3 +54,76 @@ travel-map/
 - travel.tashikani.jp
 - ポート 3003
 - PM2 + Nginx + SSL
+
+---
+
+## 2026-02-06: Vultrデプロイ完了
+
+### デプロイ作業
+
+**実施内容**:
+1. **GitHubリポジトリ作成**: https://github.com/djtashikani/travel-map にプッシュ
+2. **サーバーにクローン**: `/var/www/travel-map` に `git clone`
+3. **npm install**: 依存パッケージのインストール
+4. **PM2起動**: `travel-map` プロセスをPM2で起動
+5. **Nginx設定**: `travel.tashikani.jp` → `localhost:3003` のリバースプロキシ設定
+6. **SSL証明書取得**: Let's Encrypt（certbot）で取得（有効期限: 2026-05-07）
+
+### 技術的な問題と対応
+
+#### better-sqlite3コンパイル失敗
+- `better-sqlite3` がVultr環境（Ubuntu 24.04）でネイティブコンパイルに失敗
+- **対応**: `server.js`（インメモリ版）にフォールバックして運用
+- **ecosystem.config.js** を `server-sqlite.js` → `server.js` に変更
+- **今後の対応**: Node.jsのビルドツール（build-essential, python3）をインストールして `better-sqlite3` を再インストール予定
+
+```bash
+# better-sqlite3を再インストールする場合
+apt-get install -y build-essential python3
+cd /var/www/travel-map
+npm install better-sqlite3
+# ecosystem.config.jsのscriptをserver-sqlite.jsに戻す
+pm2 restart travel-map
+```
+
+#### SSH接続不安定
+- 複数回のSSH試行でIPがブロックされる問題が頻発
+- **原因**: UFWのSSHレート制限 + sshdのMaxStartupsデフォルト設定
+- **対応**:
+  - `MaxStartups 100:30:200` に設定
+  - UFWのSSHルールを `LIMIT` → `ALLOW` に変更
+  - fail2banを無効化
+  - Vultr APIリブートでIPブロックをリセット
+
+#### video-chopper Dockerコンテナ停止
+- デプロイ作業中にDockerコンテナが停止していたことを発見
+- **対応**: `docker start video-chopper` で復旧
+
+### DNS設定（要確認）
+- `travel.tashikani.jp` のAレコードを `198.13.36.101` に向ける必要あり
+- 2026-02-06時点で `85.131.209.157` を指しており、Vultrへの到達不可
+- DNS変更後はVultrのNginx + SSL設定で正しく動作する見込み
+
+### 現在の本番環境サマリー（2026-02-06時点）
+
+| 項目 | 値 |
+|------|-----|
+| サーバー | Vultr VPS (198.13.36.101) |
+| OS | Ubuntu 24.04 LTS |
+| Node.js | v22.22.0 |
+| PM2 | v6.0.14 |
+| Nginx | 1.24.0 |
+| SSL | Let's Encrypt（有効期限: 2026-05-07） |
+
+**同居アプリケーション**:
+
+| アプリ | URL | ポート | 管理方法 | 状態 |
+|--------|-----|--------|----------|------|
+| sydney-travel-map | https://map.tashikani.jp | 3000 | PM2 | ✅ 稼働中 |
+| video-chopper | https://video-chopper.tashikani.jp | 3001 | Docker | ✅ 稼働中 |
+| mind-circuit | https://basic.mind-circuit.jp | 3002 | PM2 | ✅ 稼働中 |
+| **travel-map** | **https://travel.tashikani.jp** | **3003** | **PM2** | **⚠️ DNS未反映** |
+
+---
+
+*最終更新: 2026-02-06*

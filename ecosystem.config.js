@@ -2,7 +2,7 @@
 module.exports = {
   apps: [{
     name: 'travel-map',
-    script: 'server-sqlite.js',  // SQLite版を使用（データ永続化）
+    script: 'server.js',  // インメモリ版（better-sqlite3コンパイル問題回避）
     instances: 1,
     autorestart: true,
     watch: false,
