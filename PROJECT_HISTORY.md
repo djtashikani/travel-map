@@ -125,4 +125,109 @@ pm2 restart travel-map
 
 ---
 
-*最終更新: 2026-02-06*
+### 2026-02-06: Xserver VPSへの移行完了
+
+**背景**: VultrサーバーのSSH接続が不安定（短時間に複数接続するとIPがブロックされる問題）のため、Xserver VPSへ移行。
+
+**新サーバー情報**:
+| 項目 | 値 |
+|------|-----|
+| プロバイダ | Xserver VPS |
+| サーバー名 | tp-vps |
+| IPアドレス | 162.43.55.45 |
+| OS | Ubuntu 24.04 |
+| vCPU | 4コア |
+| メモリ | 6GB |
+
+**移行内容**:
+- tarballでソースコードを転送
+- npm install --production
+- PM2でプロセス起動
+- Nginx設定を新規作成
+- Let's Encrypt SSL証明書を取得（有効期限: 2026-05-07）
+
+**サーバー管理コマンド（新サーバー）**:
+```bash
+# SSH接続
+ssh -i "E:/Claude code/tp-vps/tp-vps.pem" root@162.43.55.45
+
+# PM2状態確認
+pm2 list
+
+# アプリ再起動
+pm2 restart travel-map
+
+# ログ確認
+pm2 logs travel-map --lines 50
+```
+
+---
+
+## 現在の本番環境サマリー（2026-02-06時点）
+
+| 項目 | 値 |
+|------|-----|
+| サーバー | Xserver VPS (162.43.55.45) |
+| OS | Ubuntu 24.04 |
+| vCPU | 4コア |
+| RAM | 6GB |
+| Node.js | v22.22.0 |
+| PM2 | v6.0.14 |
+| Nginx | 1.24.0 |
+| SSL | Let's Encrypt（有効期限: 2026-05-07） |
+
+**同居アプリケーション**:
+
+| アプリ | URL | ポート | 管理方法 |
+|--------|-----|--------|----------|
+| sydney-travel-app | https://map.tashikani.jp | 3000 | PM2 |
+| video-splitter | https://video-chopper.tashikani.jp | 3001 | Docker |
+| mind-circuit | https://basic.mind-circuit.jp | 3002 | PM2 |
+| travel-map | https://travel.tashikani.jp | 3003 | PM2 |
+
+---
+
+## 2026-02-07: better-sqlite3導入（データ永続化対応）
+
+### 概要
+インメモリ版（server.js）からSQLite版（server-sqlite.js）に切り替え。サーバー再起動してもデータが保持されるようになった。
+
+### 技術的な対応
+
+#### パケットフィルターによるアウトバウンド通信制限
+- Xserver VPSのパケットフィルター（ON状態）ではインバウンドのみ許可、アウトバウンド全通信がブロックされる
+- `apt-get update`や`npm install`など外部サーバーへの通信が一切不可
+- **対応**: パケットフィルターを一時的にOFFにしてインストール後、ONに復旧
+
+#### better-sqlite3のインストール手順
+- `npm install`ではネイティブモジュールのコンパイルにgccが必要だが、サーバーにgccがなくapt-getも使えない状況
+- **対応**: GitHubリリースからプリビルドバイナリ（linux-x64, Node ABI v127）をローカルPCでダウンロードし、SCPで転送
+
+```bash
+# 1. ローカルPCでプリビルドバイナリをダウンロード
+curl -sL "https://github.com/WiseLibs/better-sqlite3/releases/download/v12.6.2/better-sqlite3-v12.6.2-node-v127-linux-x64.tar.gz" -o prebuilt.tar.gz
+
+# 2. npmパッケージとバイナリをSCPで転送
+scp prebuilt.tar.gz root@162.43.55.45:/tmp/
+npm pack better-sqlite3 && scp better-sqlite3-*.tgz root@162.43.55.45:/tmp/
+
+# 3. サーバーでインストール
+npm install /tmp/better-sqlite3-*.tgz --ignore-scripts
+mkdir -p node_modules/better-sqlite3/build/Release
+tar xzf /tmp/prebuilt.tar.gz -C /tmp/bs3 && cp /tmp/bs3/build/Release/*.node node_modules/better-sqlite3/build/Release/
+```
+
+### 変更内容
+- `ecosystem.config.js`: `server.js` → `server-sqlite.js` に変更
+- PM2再起動・pm2 save実施
+- `/api/admin/stats` エンドポイント利用可能に
+
+### 動作確認
+- ✅ `https://travel.tashikani.jp` → HTTP 200
+- ✅ `/api/admin/stats` → `{"userCount":0}`
+- ✅ `/api/sync/test123` → `{"success":true,"data":null}`
+- ✅ パケットフィルターON状態で正常動作
+
+---
+
+*最終更新: 2026-02-07*
