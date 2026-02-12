@@ -1344,8 +1344,6 @@
                 <span class="user-id" id="displayUserId">未ログイン</span>
             </div>
             <button class="header-btn" onclick="refreshData()" id="refreshBtn" title="最新情報に更新">🔄</button>
-            <button class="header-btn" onclick="shareUrl()">🔗 共有</button>
-            <button class="header-btn" onclick="clearAllData()">🗑️ リセット</button>
         </div>
     </div>
 
@@ -1460,22 +1458,6 @@
                 ➖ 地図を最小化
             </button>
             <div id="map"></div>
-        </div>
-    </div>
-
-    <div class="share-overlay" id="shareOverlay">
-        <div class="share-container">
-            <h3>🔗 マップを共有</h3>
-            <div class="share-url-box">
-                <input type="text" class="share-url-input" id="shareUrlInput" readonly>
-                <button class="copy-btn" onclick="copyShareUrl()">コピー</button>
-            </div>
-            <div class="share-buttons">
-                <a href="#" class="share-btn line" id="lineShareBtn" target="_blank">
-                    📱 LINE
-                </a>
-            </div>
-            <button class="share-btn close" onclick="closeShareModal()">閉じる</button>
         </div>
     </div>
 
@@ -1630,9 +1612,6 @@
         });
 
         async function refreshData() {
-            const confirmed = confirm('現在の情報が上書きされます。本当に実行しますか？');
-            if (!confirmed) return;
-
             const refreshBtn = document.getElementById('refreshBtn');
             refreshBtn.disabled = true;
             refreshBtn.textContent = '⏳';
